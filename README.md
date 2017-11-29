@@ -6,8 +6,8 @@
 
 1. *Face Sketch Synthesis and Recognition. (Tang and Wang, ICCV2003)* **The very first paper**  
 Key ideas:
-  - A new face can be reconstructed from training samples by PCA.
-  - The transformation between photo and sketch can be approximated as a linear process.
+    - A new face can be reconstructed from training samples by PCA.
+    - The transformation between photo and sketch can be approximated as a linear process.
 
 1. *A Nonlinear Approach for Face Sketch Synthesis and Recognition (CVPR2005)*  
 Key ideas: extract images into patches, assume local linearity rather than global linearity
