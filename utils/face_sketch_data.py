@@ -5,7 +5,6 @@ import torch
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms
 
-import cv2 as cv
 from PIL import Image, ImageEnhance
 import numpy as np
 import matplotlib.pyplot as plt
@@ -14,6 +13,9 @@ from img_process import draw_landmark_mask
 from models.vgg19 import vgg19
 import img_process
 from pthutils import tensorToVar
+
+import skimage.transform as sktran
+from skimage import color
 
 class FaceSketchDataset(Dataset):
     """
@@ -34,7 +36,7 @@ class FaceSketchDataset(Dataset):
             return sorted(files)
 
     def get_sketch_names(self):
-        if self.sketch_filter == None:
+        if self.sketch_filter is None:
             return self.img_names
         else:
             return self.sketch_filter(self.img_names)
@@ -48,13 +50,44 @@ class FaceSketchDataset(Dataset):
         photo_of_sketch_path = os.path.join(self.face_dir, self.sketch_names[idx % len(self.sketch_names)])
         face = Image.open(face_path).convert('RGB')
         sketch = Image.open(sketch_path).convert('RGB')
-        photo_of_sketch = Image.open(photo_of_sketch_path).convert('RGB')
         sample = [face, sketch, photo_of_sketch]
 
         if self.transform:
             sample = self.transform(sample)
         return sample
 
+
+class FaceDataset(Dataset):
+    """
+    Face dataset.
+    Args:
+        img_dirs: dir list to read photo from.
+    """
+    def __init__(self, img_dirs, transform=None):
+        self.img_dirs = img_dirs
+        self.img_names = self.__get_imgnames__() 
+        self.transform = transform
+
+    def __get_imgnames__(self):
+        tmp = []
+        for i in self.img_dirs:
+            for name in os.listdir(i):
+                tmp.append(os.path.join(i, name))
+        return tmp
+
+    def __len__(self):
+        return len(self.img_names)
+
+    def __getitem__(self, idx):
+        face_path   = self.img_names[idx]
+        face        = Image.open(face_path).convert('RGB')
+        face_origin = Image.open(face_path).convert('RGB')
+        face_gray   = Image.open(face_path).convert('L')
+        sample      = [face, face_origin, face_gray]
+
+        if self.transform:
+            sample = self.transform(sample)
+        return sample
 
 class AddMask(object):
     """
@@ -67,6 +100,25 @@ class AddMask(object):
         mask = draw_landmark_mask(sample[0], self.detector_path)
         sample.append(mask)
         return sample 
+
+class Shift(object):
+    """
+    Add key facial parts mask.
+    """
+    def __init__(self, (tx, ty)):
+        self.tform = sktran.AffineTransform(translation=(tx, ty))
+
+    def __call__(self, sample):
+        sample[0] = sktran.warp(sample[0], self.tform) * 255
+        return sample 
+
+class ToGray(object):
+    def __call__(self, sample):
+        sample[0] = color.rgb2gray(sample[0]) 
+        sample[0] = sample[0][..., np.newaxis]
+        for idx, i in enumerate(sample[1:]):
+            sample[idx + 1] = i.convert('L')
+        return sample
 
 
 #  class FindBestMatch(object):

@@ -13,16 +13,17 @@ DoG = 0
 resume = 0
 #  train_data = './small_data'
 #  train_data = '/data2/cfchen/pytorch-CycleGAN-and-pix2pix/datasets/edges2shoes/train'
-train_data = '/data2/cfchen/pytorch-CycleGAN-and-pix2pix/datasets/cityscapes/train'
-#  train_data = '/data2/cfchen/pytorch-CycleGAN-and-pix2pix/datasets/facades/train'
+#  train_data = '/data2/cfchen/pytorch-CycleGAN-and-pix2pix/datasets/cityscapes/train'
+#  train_data = '/data2/cfchen/pytorch-CcleGAN-and-pix2pix/datasets/facades/train'
 #  train_data = '/data2/cfchen/pytorch-CycleGAN-and-pix2pix/datasets/edges2handbags/train'
 #  train_data = '/data2/cfchen/pytorch-CycleGAN-and-pix2pix/datasets/maps/train'
+train_data = './face_sketch_data/CUHK_AR'
 other = '_'
 param = [
         '--train-data {}'.format(train_data),
         '--batch-size {}'.format(batch_size),
         '--lr {}'.format(learning_rate),
-        '--pre-epochs {}'.format(pre_epochs),
+        #  '--pre-epochs {}'.format(pre_epochs),
         '--tune-epochs {}'.format(tune_epochs),
         '--vgg19-weight {}'.format(vgg_weight),
         '--model-version {}'.format(model_version),

@@ -9,8 +9,8 @@ from torch.optim import Adam
 
 import argparse
 import os
-import numpy as np
 import cv2 as cv
+import numpy as np
 from time import time
 from datetime import datetime
 import itertools
@@ -76,7 +76,7 @@ def train(model, args, save_weight_dir, save_weight_path):
     transform = transforms.Compose(list(itertools.compress(transform_list, trans_filter)))
 
     if len(glob(os.path.join(args.train_data, '*/'))):
-        p2p_data = FaceSketchDataset(args.train_data, transform)
+        p2p_data = FaceSketchDataset(args.train_data, transform=transform)
     else:
         p2p_data = Pix2PixDataset(args.train_data, transform)
 
@@ -123,7 +123,7 @@ def train(model, args, save_weight_dir, save_weight_path):
             tv_loss = total_variation(photo_pred)
 
             if args.loss_func < 3:
-                feature_loss = feature_loss_func[args.loss_func](photo_pred_vgg, gt_img_vgg, vgg19_model, feature_loss_layers)
+                feature_loss = feature_loss_func[args.loss_func](photo_pred_vgg, gt_img_vgg, vgg19_model, layer=feature_loss_layers)
             if args.loss_func == 3:
                 feature_loss = feature_mrf_loss_func(photo_pred_vgg, gt_img_vgg, vgg19_model, feature_loss_layers, train_img_vgg)
             if args.loss_func == 4:

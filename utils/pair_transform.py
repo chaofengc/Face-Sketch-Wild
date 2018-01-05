@@ -23,7 +23,7 @@ class Rescale(object):
 
     def __call__(self, sample):
         for idx, i in enumerate(sample):
-            sample[idx] = transforms.resize(i, self.output_size)
+            sample[idx] = transforms.functional.resize(i, self.output_size)
         return sample
 
 
@@ -35,7 +35,7 @@ class ToTensor(object):
     """
     def __call__(self, sample):
         for idx, i in enumerate(sample):
-            sample[idx] = transforms.to_tensor(i) * 255.
+            sample[idx] = transforms.functional.to_tensor(i) * 255.
         return sample 
 
 

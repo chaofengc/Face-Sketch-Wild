@@ -5,7 +5,6 @@ import torch
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms
 
-import cv2 as cv
 from PIL import Image, ImageEnhance
 import numpy as np
 import matplotlib.pyplot as plt

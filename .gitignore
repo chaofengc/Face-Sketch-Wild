@@ -1,5 +1,6 @@
-face_sketch_data/
+data/
+data_process/
 results/
-small_data/
+others_result/
 weight/
 test/

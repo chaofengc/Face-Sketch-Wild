@@ -33,6 +33,7 @@ import search_dataset
 def cmd_option():
     arg_parser = argparse.ArgumentParser(description='CMD arguments for the face sketch network')
     arg_parser.add_argument('train_eval', type=str, default='train', help='Train or eval')
+    arg_parser.add_argument('--gpus', type=str, default='0', help='Which gpus to train on')
     arg_parser.add_argument('--train-data', type=str, default="./data", help="Train data dir root")
     arg_parser.add_argument('--seed', type=int, default=123, help='Random seed for training')
     arg_parser.add_argument('--batch-size', type=int, default=12, help='Train batch size')
@@ -47,6 +48,7 @@ def cmd_option():
     arg_parser.add_argument('--weight', type=float, nargs=3, default=[1e-2, 1e0, 1e-5], help="MSE loss weight, Feature loss weight, and total variation weight")
     arg_parser.add_argument('--loss-func', type=int, default=0, help="Feature loss type: mse, mrf, gm")
     arg_parser.add_argument('--direction', type=str, default='AtoB', help="Which direction to translate image.")
+    arg_parser.add_argument('--time-steps', type=int, default=1, help="Time steps in Convolutional GRU")
     arg_parser.add_argument('--other', type=str, default='', help="Other information")
     
     arg_parser.add_argument('--test-img', type=str, default='', help='Test image path')
@@ -88,6 +90,8 @@ def train(model, args, save_weight_dir, save_weight_path):
     data_loader = DataLoader(p2p_data, shuffle=True, batch_size=args.batch_size, **kwargs)
 
     vgg19_model = vgg19(args.vgg19_weight, type='normal') 
+    if len(args.gpus.split(',')) > 1:
+        vgg19_model = torch.nn.DataParallel(vgg19_model, device_ids=range(len(args.gpus.split(','))))
     
     params = list(model.parameters())
     optimizer = Adam(params, args.lr)
@@ -111,18 +115,6 @@ def train(model, args, save_weight_dir, save_weight_path):
                             #  './face_sketch_data/feature_dataset.pth', './face_sketch_data/dataset_img_list.txt',
                             #  vgg19_model)
 
-            #  for i in range(gt_img.size(0)):
-                #  fig = plt.figure()
-                #  fig.add_subplot(141)
-                #  plt.imshow(train_img[i].data.cpu().numpy().transpose(1, 2, 0).astype(np.uint8))
-                #  fig.add_subplot(142)
-                #  plt.imshow(gt_img[i].data.cpu().numpy().transpose(1, 2, 0).astype(np.uint8))
-                #  fig.add_subplot(143)
-                #  plt.imshow(ps_img[i].data.cpu().numpy().transpose(1, 2, 0).astype(np.uint8))
-                #  fig.add_subplot(144)
-                #  plt.imshow(mask[i].data.cpu().numpy().squeeze(), cmap='gray')
-                #  plt.waitforbuttonpress()
-
             if args.direction == "BtoA":
                 train_img, gt_img = gt_img, train_img
             end = time()
@@ -130,27 +122,26 @@ def train(model, args, save_weight_dir, save_weight_path):
             sample_count += train_img.size(0)
 
             start = time()
-            photo_pred = model(train_img)
-            photo_pred = photo_pred.expand_as(train_img)
+            if len(args.gpus.split(',')) > 1:
+                net = torch.nn.DataParallel(model, device_ids=range(len(args.gpus.split(','))))
+                photo_pred = net(train_img)
+            else:
+                photo_pred = model(train_img)
+            #  photo_pred = net(train_img)
+            #  photo_pred = model(train_img)
 
             train_img_vgg = img_process.subtract_imagenet_mean_batch(train_img)
             gt_img_vgg = img_process.subtract_imagenet_mean_batch(gt_img)
             ps_img_vgg = img_process.subtract_imagenet_mean_batch(ps_img)
             photo_pred_vgg = img_process.subtract_imagenet_mean_batch(photo_pred)
 
-            #  content_loss = feature_mse_loss_func(photo_pred_vgg.clone(), train_img_vgg, vgg19_model, layer=feature_loss_layers)
-            if args.loss_func == 0:
-                content_loss = feature_mse_loss_func(photo_pred_vgg.clone(), gt_img_vgg, vgg19_model, layer=feature_loss_layers)
-                style_loss = feature_mrf_loss_func(photo_pred_vgg.clone(), gt_img_vgg, vgg19_model, feature_loss_layers, [train_img_vgg, ps_img_vgg])
-            elif args.loss_func == 1:
-                content_loss = feature_mse_loss_func(photo_pred_vgg.clone(), gt_img_vgg, vgg19_model, layer=feature_loss_layers)
-                style_loss = feature_mrf_loss_func(photo_pred_vgg.clone(), gt_img_vgg, vgg19_model, feature_loss_layers, [train_img_vgg])
-            elif args.loss_func == 2:
-                content_loss = mse_crit(photo_pred, gt_img)
-                style_loss = feature_mrf_loss_func(photo_pred, gt_img)
-            tv_loss = total_variation(photo_pred.clone())
+            content_loss = mse_crit(photo_pred, gt_img)
+            feature_loss = feature_mse_loss_func(photo_pred_vgg, gt_img_vgg, vgg19_model, layer=feature_loss_layers)
+            tv_loss = total_variation(photo_pred)
 
-            loss_list = [a * b for a, b in zip(args.weight, [content_loss, style_loss, tv_loss])]
+            loss_weight = args.weight
+
+            loss_list = [a * b for a, b in zip(loss_weight, [content_loss, feature_loss, tv_loss])]
             loss = sum(loss_list)
  
             optimizer.zero_grad()
@@ -176,12 +167,15 @@ def train(model, args, save_weight_dir, save_weight_path):
 
 
 def val(model, epochs, val_img_path, save_val_dir):
+    size = (256, 256)
     if not os.path.exists(save_val_dir):
         os.mkdir(save_val_dir)
     model.eval()
-    photo_input = img_process.read_img_var(val_img_path)
+    photo_input = img_process.read_img_var(val_img_path, size=size)
     photo_pred = model(photo_input)
-    img_process.save_var_img(photo_pred, os.path.join(save_val_dir, "epoch-{:03d}.png".format(epochs)))
+    for i in range(photo_pred.size(0)):
+        tmp = photo_pred[i]
+        img_process.save_var_img(tmp, os.path.join(save_val_dir, "epoch-{:03d}-time{}.png".format(epochs, i)), size=(250, 200))
 
 
 def test(model, args, save_weight_dir, save_weight_path):
@@ -208,14 +202,15 @@ def test(model, args, save_weight_dir, save_weight_path):
     print('Image saved in {}'.format(face_save_path))
 
 if __name__ == '__main__':
-    gm=GPUManager()
-    torch.cuda.set_device(gm.auto_choice())
+    #  gm=GPUManager()
+    #  torch.cuda.set_device(gm.auto_choice())
     args = cmd_option()
+    os.environ['CUDA_VISIBLE_DEVICES'] = args.gpus
 
     in_channels = 3 
     out_channels = 3
     model_list = [SketchNetV1(in_channels=in_channels, out_channels=out_channels, norm=args.norm),
-                  SketchNetV2(in_channels=in_channels, out_channels=out_channels)]
+                  SketchNetV2(in_channels=in_channels, out_channels=out_channels, time_steps=args.time_steps)]
     model = model_list[args.model_version-1] 
     loss_func_list = ['mse', 'mrf', 'gm']
     save_weight_dir = 'pix2pix-{}-{}-{}-{}-lr{:.4f}-layers{}-loss_{}-weight-{:.1e}-{:.1e}-{:.1e}-epoch{:02d}-{}'.format(

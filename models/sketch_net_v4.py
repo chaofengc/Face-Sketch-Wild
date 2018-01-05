@@ -1,12 +1,13 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 import numpy as np
 from time import time
 from components import *
 
-class SketchNetV1(torch.nn.Module):
-    def __init__(self, in_channels=3, out_channels=1, norm='IN'):
-        super(SketchNetV1, self).__init__()
+class SketchNetV4(torch.nn.Module):
+    def __init__(self, in_channels=3, out_channels=3, norm='IN'):
+        super(SketchNetV4, self).__init__()
 
         # Initial convolution layers
         self.conv1 = ConvLayer(in_channels, 32, kernel_size=3, stride=1)
@@ -24,27 +25,33 @@ class SketchNetV1(torch.nn.Module):
         self.res5 = ResidualBlock(128, norm_type=norm)
 
         # Upsampling Layers
-        self.deconv1 = UpsampleConvLayer(128, 64, kernel_size=3, stride=1, upsample=2)
+        self.deconv1 = UpsampleConvLayer(256, 64, kernel_size=3, stride=1, upsample=2)
         self.norm4 = nn.BatchNorm2d(64) if norm=='BN' else torch.nn.InstanceNorm2d(64, affine=True) 
-        self.deconv2 = UpsampleConvLayer(64, 32, kernel_size=3, stride=1, upsample=2)
+        self.deconv2 = UpsampleConvLayer(128, 32, kernel_size=3, stride=1, upsample=2)
         self.norm5 = nn.BatchNorm2d(32) if norm=='BN' else torch.nn.InstanceNorm2d(32, affine=True)
-        self.deconv3 = ConvLayer(32, out_channels, kernel_size=3, stride=1)
+        self.deconv3 = ConvLayer(64, out_channels, kernel_size=3, stride=1)
 
         self.relu = nn.ReLU()
 
     def forward(self, X):
-        in_X = X
-        y = self.relu(self.norm1(self.conv1(in_X)))
-        y = self.relu(self.norm2(self.conv2(y)))
-        y = self.relu(self.norm3(self.conv3(y)))
-        y = self.res1(y)
+        y_conv1 = self.relu(self.norm1(self.conv1(X)))
+        y_conv2 = self.relu(self.norm2(self.conv2(y_conv1)))
+        y_conv3 = self.relu(self.norm3(self.conv3(y_conv2)))
+        y = self.res1(y_conv3)
         y = self.res2(y)
         y = self.res3(y)
         y = self.res4(y)
-        y = self.res5(y)
-        y = self.relu(self.norm4(self.deconv1(y)))
-        y = self.relu(self.norm5(self.deconv2(y)))
-        y = self.deconv3(y)
-        return y
+        y_deconv0 = self.res5(y)
+        y_deconv0 = torch.cat((y_deconv0, y_conv3), 1)
+        y_deconv1 = self.relu(self.norm4(self.deconv1(y_deconv0)))
+        y_deconv1 = torch.cat((y_deconv1, y_conv2), 1)
+        y_deconv2 = self.relu(self.norm5(self.deconv2(y_deconv1)))
+        y_deconv2 = torch.cat((y_deconv2, y_conv1), 1)
+        y = self.deconv3(y_deconv2)
+
+        flow = y[:, :2]
+        result = y[:, -1].unsqueeze(1)
+        result = F.grid_sample(result, torch.tanh(flow.permute(0, 2, 3, 1)))
+        return result
 
 
