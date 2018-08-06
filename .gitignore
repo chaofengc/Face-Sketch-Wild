@@ -1,6 +1,17 @@
+others/
 data/
-data_process/
-results/
-others_result/
-weight/
+data_process/shape_predictor_68_face_landmarks.dat
+result_all/
+result_ours/
 test/
+weight/
+eval_code/
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+

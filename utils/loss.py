@@ -7,7 +7,6 @@ import torch.nn.functional as F
 from torchvision.transforms import functional as tf
 
 from pthutils import tensorToVar, extract_patches
-import matplotlib.pyplot as plt
 from time import sleep
 
 def total_variation(x):
@@ -154,6 +153,39 @@ class MRFLoss(nn.Module):
             spatial_match.append(spatial_idx.squeeze(1).view(spatial_idx.shape[0], -1).data)
         return torch.stack(k_match), torch.stack(spatial_match)
 
+    def get_new_style_map(self):
+        # Visulize new_target_style_patches
+        B, nHnW, c, _, _ = self.new_style_feature.size()
+        feature_map = torch.mean(self.new_style_feature.view(B, nHnW, c, -1), -1)
+        feature_map = feature_map.view(B, np.sqrt(nHnW).astype(int), np.sqrt(nHnW).astype(int), c)
+        feature_map = feature_map.permute(0, 3, 1, 2)
+        return feature_map
+
+    def get_pixel_match(self, topk_ref_style):
+        topk_style_patches = extract_patches(topk_ref_style, (12, 12), 4)
+        pred_shape = list(topk_style_patches.size())
+        pred_shape[0] = 1
+        new_topk_target_style_patches = tensorToVar(torch.zeros(pred_shape[0]*self.topk,
+                                                pred_shape[1], pred_shape[2], pred_shape[3], pred_shape[4])) 
+        self.spatial_best_match = self.spatial_best_match.view(pred_shape[0]*self.topk, -1)
+        for i in range(pred_shape[0]*self.topk):
+            new_topk_target_style_patches[i] = topk_style_patches[[i], self.spatial_best_match[i]]
+        new_topk_target_style_patches = new_topk_target_style_patches.view(pred_shape[0], self.topk,
+                                                            pred_shape[1], pred_shape[2], pred_shape[3], pred_shape[4]) 
+        new_target_style_patches = tensorToVar(torch.zeros(pred_shape)) 
+        for i in range(self.k_best_match.shape[0]):
+            for j in range(self.k_best_match.shape[1]):
+                new_target_style_patches[i, j] = new_topk_target_style_patches[i, self.k_best_match[i, j], j]
+        B, nHnW, c, _, _ = new_target_style_patches.shape
+        nH = int(np.sqrt(nHnW))
+        pix_vis = new_target_style_patches[:, :, :, 4:8, 4:8].squeeze()
+                
+        pix_vis = pix_vis.permute(1, 0, 2, 3).contiguous()
+        pix_vis = pix_vis.view(3, nH, nH, 4, 4)
+        pix_vis = pix_vis.permute(0, 1, 3, 2, 4).contiguous()
+        pix_vis = pix_vis.view(3, nH*4, nH*4)
+        return pix_vis.unsqueeze(0)
+
     def forward(self, pred_style, target_style, match=[]):
         """
         pred_style: feature of predicted image 
@@ -179,6 +211,9 @@ class MRFLoss(nn.Module):
             match_patches = extract_patches(match[1], self.patch_size, self.filter_patch_stride)
             k_best_match, spatial_best_match = self.best_topk_match(match[0], match_patches)
 
+        self.k_best_match = k_best_match
+        self.spatial_best_match = spatial_best_match
+
         pred_shape = pred_style_patches.size()
         new_topk_target_style_patches = tensorToVar(torch.zeros(pred_shape[0]*self.topk,
                                                 pred_shape[1], pred_shape[2], pred_shape[3], pred_shape[4])) 
@@ -191,24 +226,9 @@ class MRFLoss(nn.Module):
         for i in range(k_best_match.shape[0]):
             for j in range(k_best_match.shape[1]):
                 new_target_style_patches[i, j] = new_topk_target_style_patches[i, k_best_match[i, j], j]
-        # Visulize new_target_style_patches
-        #  B, nHnW, c, _, _ = new_target_style_patches.size()
-        #  print(new_target_style_patches.size())
-        #  feature_map = torch.mean(new_target_style_patches.view(B, nHnW, c, -1), -1)
-        #  print(feature_map.size())
-        #  feature_map = feature_map.view(B, np.sqrt(nHnW).astype(int), np.sqrt(nHnW).astype(int), c)
-        #  for i in range(c):
-            #  tmp_feature = feature_map[0, :, :, i].data.cpu().unsqueeze(0)
-            #  print(tmp_feature.shape, torch.max(tmp_feature), torch.min(tmp_feature))
-            #  tmp_img = tf.to_pil_image(tmp_feature)
-            #  tmp_img.save('./tmp_img/{}.jpg'.format(i))
-            #  print(tmp_img.size)
-            #  plt.imshow(, cmap='gray')
-            #  plt.waitforbuttonpress()
-            #  sleep(30)
-        #  exit()
-
-        return self.crit(pred_style_patches, new_target_style_patches)
+        self.new_style_feature = new_target_style_patches
+        loss = self.crit(pred_style_patches, new_target_style_patches)
+        return loss 
 
 
         

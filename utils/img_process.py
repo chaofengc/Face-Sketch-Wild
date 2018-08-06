@@ -4,7 +4,6 @@ import numpy as np
 import itertools
 from PIL import Image, ImageDraw, ImageFilter
 import dlib
-import matplotlib.pyplot as plt
 
 from pthutils import tensorToVar
 #  from load_data import CalDoG, Rescale, AddXY 
@@ -83,69 +82,21 @@ def save_var_img(var, save_path=None, size=None):
         out.save(save_path)
     return out
 
-
-def subtract_imagenet_mean_batch(batch):
+def subtract_mean_batch(batch, type='face'):
     """
     Convert image batch to BGR and subtract imagenet mean
     Batch Size: (B, C, H, W), RGB
     """
-    batch = batch[:, [2, 1, 0], :, :]
-    batch[:, 0] = batch[:, 0] - 103.939
-    batch[:, 1] = batch[:, 1] - 116.779 
-    batch[:, 2] = batch[:, 2] - 123.680 
-    return batch
-
-def subtract_mean_batch(batch, type):
-    """
-    Convert image batch to BGR and subtract imagenet mean
-    Batch Size: (B, C, H, W), RGB
-    """
-    #  vggface_mean_bgr = np.array([129.1863, 104.7624, 93.5940]) 
     vgg_mean_bgr = np.array([103.939, 116.779, 123.680]) 
-    #  sketch_mean = np.array([191.7165, 191.5756, 191.8129])
-    sketch_mean = np.array([np.mean(vgg_mean_bgr)]*3)
+    sketch_mean = np.array([np.dot(vgg_mean_bgr, np.array([0.299, 0.587, 0.114]))]*3)
     if type == 'face':
         mean_bgr = vgg_mean_bgr
     elif type == 'sketch':
         mean_bgr = sketch_mean
-    elif type == 'face_gray':
-        mean_bgr = np.mean(vgg_mean_bgr).repeat(3)
 
     batch = batch[:, [2, 1, 0], :, :]
     batch = batch - tensorToVar(torch.Tensor(mean_bgr)).view(1, 3, 1, 1) 
     return batch
-
-def draw_landmark_mask(img, face_predictor_path='../scripts/shape_predictor_68_face_landmarks.dat'):
-    detector = dlib.get_frontal_face_detector()
-    predictor = dlib.shape_predictor(face_predictor_path)
-    img_array = np.array(img)
-    dets = detector(img_array, 1)
-    if len(dets) < 1:
-        return [] 
-    for k, d in enumerate(dets):
-        # Get the landmarks/parts for the face in box d.
-        shape = predictor(img_array, d)
-    landmarks = []
-    for i in range(68):
-        landmarks.append([shape.part(i).x, shape.part(i).y])
-    landmarks = np.array(landmarks)
-    landmark_parts = [landmarks[0:17],  # cheek
-                      landmarks[17:22], # left eyebrow
-                      landmarks[22:27], # right eyebrow
-                      landmarks[np.r_[27:36, 30]], # nose 
-                     landmarks[np.r_[36:42, 36]], # left eye
-                      landmarks[np.r_[42:48, 42]], # right eye
-                      landmarks[np.r_[48:61, 48]], # outer mouth
-                      landmarks[np.r_[61:68, 61]], # inner mouth
-                    ]
-
-    mask = Image.new('L', img.size, 0)
-    draw = ImageDraw.Draw(mask)
-    for i in landmark_parts:
-        draw.line(map(tuple, i), fill=255, width=1)
-    mask = mask.filter(ImageFilter.GaussianBlur())
-    mask = mask.point(lambda p: p > np.median(np.array(mask)) and 255)
-    return mask
 
 def save_images_grid(images, filename, cols = 1):
     """Save a list of images in a single figure with matplotlib.
