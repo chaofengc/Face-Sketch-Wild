@@ -1,11 +1,13 @@
 others/
 data/
 data_process/shape_predictor_68_face_landmarks.dat
+result/
 result_all/
 result_ours/
 test/
 weight/
 eval_code/
+pretrain_model/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

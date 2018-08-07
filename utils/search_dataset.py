@@ -1,17 +1,7 @@
 import os
-
 import torch
-from torch.utils.data import Dataset, DataLoader
-from torchvision import transforms
-import torch.nn.functional as F
-
-from PIL import Image, ImageEnhance
 import numpy as np
-
-from models.vgg19 import vgg19
 from . import img_process 
-from gpu_manager import GPUManager
-from pthutils import tensorToVar
 
 def get_real_sketch_batch(batch_size, img_name_list, dataset_filter):
     img_name_list_all = np.array([x.strip() for x in open(img_name_list).readlines()])
@@ -33,7 +23,8 @@ def find_photo_sketch_batch(photo_batch, dataset_path, img_name_list, vgg_model,
     """
     Search the dataset to find the topk matching image.
     """
-    dataset_all       = tensorToVar(torch.load(dataset_path))
+    dataset_all       = torch.load(dataset_path)
+    dataset_all       = torch.autograd.Variable(dataset_all.type_as(photo_batch.data))
     img_name_list_all = np.array([x.strip() for x in open(img_name_list).readlines()])
     img_name_list     = []
     dataset_idx       = []
@@ -47,8 +38,8 @@ def find_photo_sketch_batch(photo_batch, dataset_path, img_name_list, vgg_model,
     img_name_list = np.array(img_name_list)
 
     photo_feat = vgg_model(img_process.subtract_mean_batch(photo_batch), compare_layer)[0]
-    photo_feat = F.normalize(photo_feat, p=2, dim=1).view(photo_feat.size(0), photo_feat.size(1), -1)
-    dataset    = F.normalize(dataset, p=2, dim=1).view(dataset.size(0), dataset.size(1), -1)
+    photo_feat = torch.nn.functional.normalize(photo_feat, p=2, dim=1).view(photo_feat.size(0), photo_feat.size(1), -1)
+    dataset    = torch.nn.functional.normalize(dataset, p=2, dim=1).view(dataset.size(0), dataset.size(1), -1)
     img_idx    = []
     for i in range(photo_feat.size(0)):
         dist = photo_feat[i].unsqueeze(0) * dataset
@@ -85,6 +76,7 @@ def select_random_batch(ref_img_list, batch_size, dataset_filter=['CUHK_student'
     return selected_ref_batch, selected_sketch_batch
 
 if __name__ == '__main__':
+    from gpu_manager import GPUManager
     gm=GPUManager()
     torch.cuda.set_device(gm.auto_choice())
     #  build_dataset('./face_sketch_data/feature_dataset.pth', './face_sketch_data/dataset_img_list.txt')

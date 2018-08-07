@@ -2,7 +2,7 @@
 
 PyTorch implementation for face sketch synthesis in the wild through semi-supervised learning. Here is an example:
 
-Semi-Supervised Learning for Face Sketch Synthesis in the Wild.
+[Semi-Supervised Learning for Face Sketch Synthesis in the Wild.]()  
 [Chaofeng Chen](https://cfchen.com/), [Wei Liu](http://www.visionlab.cs.hku.hk/people.html), [Xiao Tan](http://www.xtan.org/), [Kwan-Yee K. Wong](http://i.cs.hku.hk/~kykwong/).   
 
 # Prerequisites

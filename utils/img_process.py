@@ -1,12 +1,10 @@
 import torch
 from torchvision import transforms
 import numpy as np
-import itertools
 from PIL import Image, ImageDraw, ImageFilter
 import dlib
 
-from pthutils import tensorToVar
-#  from load_data import CalDoG, Rescale, AddXY 
+from .utils import tensorToVar
 
 def read_img_var(img_path, color=1, size=None):
     """
@@ -31,16 +29,7 @@ def read_sketch_var(img_path, color=1, size=None, addxy=1, DoG=1):
         size: tuple, output size (W, H)
     """
     img = Image.open(img_path).convert('L') 
-    sample = {}
-    sample['sketch'] = transforms.functional.resize(img, size)
-    trans_list = [CalDoG(), AddXY()]
-    trans_filter = [DoG, addxy]
-    all_trans = list(itertools.compress(trans_list, trans_filter))
-    if len(all_trans):
-        trans = transforms.Compose(all_trans)
-        face_img = trans(sample)['sketch']
-    else:
-        face_img = sample['sketch']
+    face_img = transforms.functional.resize(img, size)
     return tensorToVar(transforms.functional.to_tensor(face_img)) * 255
 
 def read_imgAB_var(img_path, AB=0, size=None):

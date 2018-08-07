@@ -3,7 +3,6 @@ import torch.nn as nn
 from torch.optim import Adam
 from torch.optim.lr_scheduler import MultiStepLR 
 from torchvision import transforms
-from torchvision.utils import save_image
 
 import argparse
 import os
@@ -13,9 +12,6 @@ from datetime import datetime
 import itertools
 import copy
 from glob import glob
-import random
-from PIL import Image 
-import math
 
 from gpu_manager import GPUManager
 from utils.face_sketch_data import * 
@@ -28,12 +24,15 @@ from utils import logger
 from utils import utils
 from utils.metric import avg_score
 
+
 def cmd_option():
     arg_parser = argparse.ArgumentParser(description='CMD arguments for the face sketch network')
     arg_parser.add_argument('train_eval', type=str, default='train', help='Train or eval')
     arg_parser.add_argument('--gpus', type=str, default='0', help='Which gpus to train the model')
-    arg_parser.add_argument('--train-data', type=str, nargs='*', default=["./data/AR/train_photos", "./data/CUHK_student/train_photos", "./data/XM2VTS/train_photos", "./data/CUFSF/train_photos"], help="Train data dir root")
-    arg_parser.add_argument('--train-style', type=int, nargs=4, default=[1, 1, 1, 0], help='Styles used to train')
+    arg_parser.add_argument('--train-data', type=str, nargs='*', 
+            default=["./data/AR/train_photos", "./data/CUHK_student/train_photos", "./data/XM2VTS/train_photos", "./data/CUFSF/train_photos"], help="Train data dir root")
+    arg_parser.add_argument('--resume', type=int, default=0, help='Resume training or not')
+    arg_parser.add_argument('--train-style', type=str, default='cufs', help='Styles used to train')
     arg_parser.add_argument('--seed', type=int, default=123, help='Random seed for training')
     arg_parser.add_argument('--batch-size', type=int, default=6, help='Train batch size')
     arg_parser.add_argument('--lr', type=float, default=1e-3, help='Learning rate for training')
@@ -41,23 +40,17 @@ def cmd_option():
     arg_parser.add_argument('--weight-root', type=str, default='./weight', help='Weight saving path')
     arg_parser.add_argument('--vgg19-weight', type=str, default='/home/cfchen/pytorch_models/vgg_conv.pth',
                                                         help='Pretrained vgg19 weight path')
-    arg_parser.add_argument('--model-version', type=int, default=1, help="Which model to use")
     arg_parser.add_argument('--Gnorm', type=str, default='IN', help="Instance(IN) normalization or batch(BN) normalization")
     arg_parser.add_argument('--Dnorm', type=str, default='None', help="Instance(IN) normalization or batch(BN) normalization")
-    arg_parser.add_argument('--with-rec', type=int, default=0, help="Whether to do reconstruction")
     arg_parser.add_argument('--flayers', type=int, nargs=5, default=[0, 0, 1, 1, 1], help="Layers used to calculate feature loss")
-    arg_parser.add_argument('--clayers', type=int, nargs=5, default=[0, 0, 1, 0, 0], help="Which layer to calculate content loss")
     arg_parser.add_argument('--weight', type=float, nargs=3, default=[1e0, 1e3, 1e-5], help="MSE loss weight, Feature loss weight, and total variation weight")
-    arg_parser.add_argument('--direction', type=str, default='AtoB', help="Which direction to translate image.")
     arg_parser.add_argument('--topk', type=int, default=1, help="Topk image choose to match input photo")
     arg_parser.add_argument('--other', type=str, default='', help="Other information")
-    arg_parser.add_argument('--ref-feature', type=str, default='./data/feature_dataset.pth')
-    arg_parser.add_argument('--ref-img-list', type=str, default='./data/dataset_img_list.txt')
     
     arg_parser.add_argument('--test-dir', type=str, default='', help='Test image directory')
-    arg_parser.add_argument('--result-root', type=str, default='./result', help='Result saving directory')
-    arg_parser.add_argument('--test-epoch', type=int, default=10, help='Test model epoch')
-    arg_parser.add_argument('--resume', type=int, default=0, help='Resume training or not')
+    arg_parser.add_argument('--test-gt-dir', type=str, default='', help='Test ground truth image directory')
+    arg_parser.add_argument('--result-dir', type=str, default='./result', help='Result saving directory')
+    arg_parser.add_argument('--test-weight-path', type=str, default='', help='Test model path')
     return arg_parser.parse_args()
 
 def train(args):
@@ -100,7 +93,7 @@ def train(args):
         Dnet.load_state_dict(torch.load(weight_path + 'D.pth'))
 
     # ---------------- set optimizer and learning rate ---------------------
-    args.epochs = math.ceil(args.epochs * 1000 / len(dataset))
+    args.epochs = np.ceil(args.epochs * 1000 / len(dataset))
     args.epochs = max(int(args.epochs), 4)
 
     optim_G = Adam(Gnet.parameters(), args.lr)
@@ -110,8 +103,17 @@ def train(args):
     mse_crit  = nn.MSELoss()
     
     # ---------------------- Define reference styles and feature loss layers ----------        
-    ref_style =['CUHK_student', 'AR', 'XM2VTS', 'CUFSF']
-    ref_style_dataset = list(itertools.compress(ref_style, args.train_style))
+    if args.train_style == 'cufs':
+        ref_style_dataset = ['CUHK_student', 'AR', 'XM2VTS']
+        ref_feature       = './data/feature_dataset.pth'
+        ref_img_list      = './data/dataset_img_list.txt'
+    elif args.train_style == 'cufsf':
+        ref_style_dataset = ['CUFSF']
+        ref_feature       = './data/crop_feature_dataset.pth'
+        ref_img_list      = './data/crop_dataset_img_list.txt'
+    else:
+        assert 1==0, 'Train style {} not supported.'.format(args.train_style)
+
     vgg_feature_layers = ['r11', 'r21', 'r31', 'r41', 'r51']
     feature_loss_layers = list(itertools.compress(vgg_feature_layers, args.flayers)) 
 
@@ -126,9 +128,9 @@ def train(args):
             start = time()
             train_img, train_img_org = [utils.tensorToVar(x) for x in batch_data]
             topk_sketch_img, topk_photo_img = search_dataset.find_photo_sketch_batch(
-                            train_img_org, args.ref_feature, args.ref_img_list,
+                            train_img_org, ref_feature, ref_img_list,
                             vgg19_model, dataset_filter=ref_style_dataset, topk=args.topk)
-            random_real_sketch = search_dataset.get_real_sketch_batch(train_img.size(0), args.ref_img_list, dataset_filter=ref_style_dataset)
+            random_real_sketch = search_dataset.get_real_sketch_batch(train_img.size(0), ref_img_list, dataset_filter=ref_style_dataset)
             end           = time()
             data_time     = end - start
             sample_count += train_img.size(0)
@@ -171,6 +173,7 @@ def train(args):
             end = time()
             train_time = end - start
 
+            # ----------------- Print result and log the output ------------------- 
             log.iterLogUpdate(loss_G.data[0])
             if batch_idx % 100 == 0:
                 log.draw_loss_curve()
@@ -191,7 +194,11 @@ def train(args):
         torch.save(G_cpu_model.state_dict(), os.path.join(args.save_weight_path, save_weight_name+'G.pth'))
         torch.save(D_cpu_model.state_dict(), os.path.join(args.save_weight_path, save_weight_name+'D.pth'))
 
+
 def val(model, epochs, save_val_dir):
+    """
+    Validation code. To be removed when release.
+    """
     utils.mkdirs(save_val_dir)
     quan_result_file = open(save_val_dir + '/score.txt', 'a+')
     val_dirs = ['./data/CUFS', './data/CUFSF_crop', './data/vgg_test']
@@ -226,83 +233,52 @@ def val(model, epochs, save_val_dir):
     quan_result_file.write('{:02d}\t{:.4f}\t{:.4f}\t{:.4f}\t{:.4f}\n'.format(epochs, *scores))
     quan_result_file.close()
 
-def test(model, rec_model, args, save_weight_dir, save_weight_path):
-    size = (250, 200) 
-    model.eval()
 
-    if not os.path.exists(args.result_root): os.mkdir(args.result_root)
-    #  save_result_dir = args.result_root
-    save_result_dir = os.path.join(args.result_root, 'result_{:02d}'.format(args.test_epoch))
-    if not os.path.exists(save_result_dir): os.mkdir(save_result_dir)
-    
-    model.load_state_dict(torch.load(os.path.join(save_weight_path, 'epochs-{:03d}-p2s.pth'.format(args.test_epoch))))
-    if args.with_rec:
-        rec_model.load_state_dict(torch.load(os.path.join(save_weight_path, 'epochs-{:03d}-rec.pth'.format(args.test_epoch))))
+def test(args):
+    """
+    Test image of a given directory. Calculate the quantitative result if ground truth dir is provided.
+    """
+    Gnet= SketchNet(in_channels=3, out_channels=1, norm_type=args.Gnorm)
+    gpu_ids = [int(x) for x in args.gpus.split(',')]
+    if len(gpu_ids) > 0:
+        Gnet.cuda()
+        Gnet = nn.DataParallel(Gnet, device_ids=gpu_ids) 
+    Gnet.eval()
+    Gnet.load_state_dict(torch.load(args.test_weight_path))
 
+    utils.mkdirs(args.result_dir)    
     for img_name in os.listdir(args.test_dir):
         test_img_path = os.path.join(args.test_dir, img_name)
         test_img = img_process.read_img_var(test_img_path, size=(256, 256))
-        face_pred = model(test_img)
-        if face_pred.shape != test_img.shape: face_pred = face_pred.expand_as(test_img)
-        if args.with_rec:
-            face_pred_rec = face_pred.clamp(0, 255)
-            face_rec = rec_model(face_pred_rec)
-        comb_save_path = os.path.join(save_result_dir, 'comb_' + os.path.basename(test_img_path))
-        sketch_save_path = os.path.join(save_result_dir, os.path.basename(test_img_path))
-        save_img_list = []
-        save_img_list.append(img_process.save_var_img(test_img, size=size))
-        save_img_list.append(img_process.save_var_img(face_pred, size=size))
-        if args.with_rec:
-            save_img_list.append(img_process.save_var_img(face_rec, size=size))
-        imgs_comb = np.hstack((np.array(i) for i in save_img_list))
-        imgs_comb = Image.fromarray(imgs_comb)
-        imgs_comb.save(comb_save_path)
-        save_img_list[1].save(sketch_save_path)
- 
-def test_rec(model, rec_model, args, save_weight_dir, save_weight_path):
-    size = (250, 200) 
-    model.eval()
+        face_pred = Gnet(test_img)
 
-    if not os.path.exists(args.result_root): os.mkdir(args.result_root)
-    #  save_result_dir = args.result_root
-    save_result_dir = os.path.join(args.result_root, 'result_{:02d}_rec'.format(args.test_epoch))
-    if not os.path.exists(save_result_dir): os.mkdir(save_result_dir)
-    
-    model.load_state_dict(torch.load(os.path.join(save_weight_path, 'epochs-{:03d}-p2s.pth'.format(args.test_epoch))))
-    if args.with_rec:
-        rec_model.load_state_dict(torch.load(os.path.join(save_weight_path, 'epochs-{:03d}-rec.pth'.format(args.test_epoch))))
+        sketch_save_path = os.path.join(args.result_dir, img_name)
+        img_process.save_var_img(face_pred, sketch_save_path, (250, 200))
 
-    for img_name in os.listdir(args.test_dir):
-        test_img_path = os.path.join(args.test_dir, img_name)
-        test_img = img_process.read_img_var(test_img_path, size=(256, 256))
-        test_face_path = test_img_path.replace('test_sketches', 'test_photos')
-        test_face = img_process.read_img_var(test_face_path)
-        face_pred = model(test_img)
-        if face_pred.shape != test_img.shape: face_pred = face_pred.expand_as(test_img)
-        if args.with_rec:
-            face_pred_rec = face_pred.clamp(0, 255)
-            face_rec = rec_model(face_pred_rec)
-        comb_save_path = os.path.join(save_result_dir, 'comb_' + os.path.basename(test_img_path))
-        sketch_save_path = os.path.join(save_result_dir, os.path.basename(test_img_path))
-        save_img_list = []
-        save_img_list.append(img_process.save_var_img(test_img, size=size))
-        save_img_list.append(img_process.save_var_img(face_pred, size=size))
-        save_img_list.append(img_process.save_var_img(test_face, size=size))
-        if args.with_rec:
-            save_img_list.append(img_process.save_var_img(face_rec, size=size))
-        imgs_comb = np.hstack((np.array(i) for i in save_img_list))
-        imgs_comb = Image.fromarray(imgs_comb)
-        imgs_comb.save(comb_save_path)
-        save_img_list[1].save(sketch_save_path)
-   
+    if args.test_gt_dir is not None:
+        print('------------ Calculating average SSIM (This may take for a while)-----------')
+        avg_ssim = avg_score(args.test_dir, args.result_dir, metric_name='ssim', smooth=False, verbose=True) 
+        print('------------ Calculating smoothed average SSIM (This may take for a while)-----------')
+        avg_ssim_smoothed = avg_score(args.test_dir, args.result_dir, metric_name='ssim', smooth=True, verbose=True) 
+        print('------------ Calculating average FSIM (This may take for a while)-----------')
+        avg_fsim = avg_score(args.test_dir, args.result_dir, metric_name='fsim', smooth=False, verbose=True) 
+        print('------------ Calculating smoothed average FSIM (This may take for a while)-----------')
+        avg_fsim_smoothed = avg_score(args.test_dir, args.result_dir, metric_name='fsim', smooth=True, verbose=True) 
+        print('Average SSIM: {}'.format(avg_ssim))
+        print('Average SSIM (Smoothed): {}'.format(avg_ssim_smoothed))
+        print('Average FSIM: {}'.format(avg_fsim))
+        print('Average FSIM (Smoothed): {}'.format(avg_fsim_smoothed))
+
 if __name__ == '__main__':
     gm=GPUManager()
-    torch.cuda.set_device(gm.auto_choice())
+    gpu_id = gm.auto_choice()
+    torch.cuda.set_device(gpu_id)
     args = cmd_option()
+    args.gpus = '{}'.format(gpu_id)
     #  os.environ['CUDA_VISIBLE_DEVICES'] = args.gpus
 
-    args.save_weight_dir = 'face2sketch-norm_G{}_D{}-top{}-flayers{}-weight-{:.1e}-{:.1e}-{:.1e}-epoch{:02d}-{}'.format(
-                        args.Gnorm, args.Dnorm, args.topk, "".join(map(str, args.flayers)),
+    args.save_weight_dir = 'face2sketch-norm_G{}_D{}-top{}-style_{}-flayers{}-weight-{:.1e}-{:.1e}-{:.1e}-epoch{:02d}-{}'.format(
+                        args.Gnorm, args.Dnorm, args.topk, args.train_style, "".join(map(str, args.flayers)),
                         args.weight[0], args.weight[1], args.weight[2], 
                         args.epochs, args.other) 
     args.save_weight_path = os.path.join(args.weight_root, args.save_weight_dir)
@@ -312,10 +288,6 @@ if __name__ == '__main__':
         utils.mkdirs(args.save_weight_path)
         train(args)
     elif args.train_eval == 'eval':
-        print('Loading weight path', save_weight_path)
-        test(model, rec_model, args, save_weight_dir, save_weight_path)
-    elif args.train_eval == 'eval_rec':
-        print('Loading weight path', save_weight_path)
-        test_rec(model, rec_model, args, save_weight_dir, save_weight_path)
+        test(args)
 
 
