@@ -1,10 +1,18 @@
 import os
+import sys
 
 gpus             = '2'
-test_dir         = './data/CUFS/test_photos'
-test_gt_dir      = './data/CUFS/test_sketches'
-result_dir       = './result/CUFS'
-test_weight_path = './weight/face2sketch-norm_GIN_DNone-top5-style_cufs-flayers00111-weight-1.0e+00-1.0e+03-1.0e-05-epoch40-vgg00/epochs-003-G.pth'
+if sys.argv[1] == '1':
+    test_dir         = './data/CUFS/test_photos'
+    test_gt_dir      = './data/CUFS/test_sketches'
+    result_dir       = './result/CUFS'
+    test_weight_path = './pretrain_model/cufs-epochs-020-G.pth'
+elif sys.argv[1] == '2':
+    test_dir         = './data/CUFSF_crop/test_photos'
+    test_gt_dir      = './data/CUFSF_crop/test_sketches'
+    result_dir       = './result/CUFSF_crop'
+    test_weight_path = './pretrain_model/cufsf-epochs-021-G.pth'
+
 param            = [
         '--gpus {}'.format(gpus),
         '--test-dir {}'.format(test_dir),

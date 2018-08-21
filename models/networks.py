@@ -58,8 +58,7 @@ class DNet(nn.Module):
         super(DNet, self).__init__()
         b = True if norm_type == 'none' else False
         self.net = nn.Sequential(
-                ConvLayer(in_channels, 32, kernel_size=3, stride=2, bias=b),
-                NormLayer(32, norm_type),
+                ConvLayer(in_channels, 32, kernel_size=3, stride=2, bias=True),
                 nn.ReLU(inplace=True),
                 ConvLayer(32, 64, kernel_size=3, stride=2, bias=b),
                 NormLayer(64, norm_type),

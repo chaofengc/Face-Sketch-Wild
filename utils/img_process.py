@@ -75,9 +75,10 @@ def subtract_mean_batch(batch, type='face'):
     """
     Convert image batch to BGR and subtract imagenet mean
     Batch Size: (B, C, H, W), RGB
+    Convert BGR to gray by: [0.114, 0.587, 0.299]
     """
     vgg_mean_bgr = np.array([103.939, 116.779, 123.680]) 
-    sketch_mean = np.array([np.dot(vgg_mean_bgr, np.array([0.299, 0.587, 0.114]))]*3)
+    sketch_mean = np.array([np.dot(vgg_mean_bgr, np.array([0.114, 0.587, 0.299]))]*3)
     if type == 'face':
         mean_bgr = vgg_mean_bgr
     elif type == 'sketch':

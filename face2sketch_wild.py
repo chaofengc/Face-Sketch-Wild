@@ -95,11 +95,12 @@ def train(args):
     # ---------------- set optimizer and learning rate ---------------------
     args.epochs = np.ceil(args.epochs * 1000 / len(dataset))
     args.epochs = max(int(args.epochs), 4)
+    ms = [int(1./4 * args.epochs), int(2./4 * args.epochs)]
 
     optim_G = Adam(Gnet.parameters(), args.lr)
     optim_D = Adam(Dnet.parameters(), args.lr)
-    scheduler_G = MultiStepLR(optim_G, milestones=[int(1./4 * args.epochs), int(2./4 * args.epochs)], gamma=0.1)
-    scheduler_D = MultiStepLR(optim_D, milestones=[int(1./4 * args.epochs), int(2./4 * args.epochs)], gamma=0.1)
+    scheduler_G = MultiStepLR(optim_G, milestones=ms, gamma=0.1)
+    scheduler_D = MultiStepLR(optim_D, milestones=ms, gamma=0.1)
     mse_crit  = nn.MSELoss()
     
     # ---------------------- Define reference styles and feature loss layers ----------        
@@ -187,7 +188,8 @@ def train(args):
             log_file.write(msg + '\n')
             log_file.close()
         
-        val(copy.deepcopy(Gnet), e, os.path.join(args.save_weight_path, 'val')) 
+        if e > 13:
+            val(copy.deepcopy(Gnet), e, os.path.join(args.save_weight_path, 'val')) 
         save_weight_name = "epochs-{:03d}-".format(e)
         G_cpu_model = copy.deepcopy(Gnet).cpu() 
         D_cpu_model = copy.deepcopy(Dnet).cpu()
@@ -223,14 +225,14 @@ def val(model, epochs, save_val_dir):
 
         if 'vgg_test' in val_d: continue
 
-        # SSIM/FSIM score
+        # SSIM score
         ssim_score = avg_score(os.path.join(save_val_dir, val_d.split('/')[-1]), 
                 os.path.join(val_d, 'test_sketches'), smooth=False, metric_name='ssim')
         fsim_score = avg_score(os.path.join(save_val_dir, val_d.split('/')[-1]), 
                 os.path.join(val_d, 'test_sketches'), smooth=False, metric_name='fsim')
-        scores += [ssim_score, fsim_score]
+        scores += [ssim_score]
 
-    quan_result_file.write('{:02d}\t{:.4f}\t{:.4f}\t{:.4f}\t{:.4f}\n'.format(epochs, *scores))
+    quan_result_file.write('{:02d}\t{:.4f}\t{:.4f}\n'.format(epochs, *scores))
     quan_result_file.close()
 
 
@@ -257,13 +259,13 @@ def test(args):
 
     if args.test_gt_dir is not None:
         print('------------ Calculating average SSIM (This may take for a while)-----------')
-        avg_ssim = avg_score(args.test_dir, args.result_dir, metric_name='ssim', smooth=False, verbose=True) 
+        avg_ssim = avg_score(args.result_dir, args.test_gt_dir, metric_name='ssim', smooth=False, verbose=True) 
         print('------------ Calculating smoothed average SSIM (This may take for a while)-----------')
-        avg_ssim_smoothed = avg_score(args.test_dir, args.result_dir, metric_name='ssim', smooth=True, verbose=True) 
+        avg_ssim_smoothed = avg_score(args.result_dir, args.test_gt_dir, metric_name='ssim', smooth=True, verbose=True) 
         print('------------ Calculating average FSIM (This may take for a while)-----------')
-        avg_fsim = avg_score(args.test_dir, args.result_dir, metric_name='fsim', smooth=False, verbose=True) 
+        avg_fsim = avg_score(args.result_dir, args.test_gt_dir, metric_name='fsim', smooth=False, verbose=True) 
         print('------------ Calculating smoothed average FSIM (This may take for a while)-----------')
-        avg_fsim_smoothed = avg_score(args.test_dir, args.result_dir, metric_name='fsim', smooth=True, verbose=True) 
+        avg_fsim_smoothed = avg_score(args.result_dir, args.test_gt_dir, metric_name='fsim', smooth=True, verbose=True) 
         print('Average SSIM: {}'.format(avg_ssim))
         print('Average SSIM (Smoothed): {}'.format(avg_ssim_smoothed))
         print('Average FSIM: {}'.format(avg_fsim))

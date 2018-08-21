@@ -106,25 +106,6 @@ class MRFLoss(nn.Module):
         self.filter_patch_stride = filter_patch_stride
         self.topk = topk
 
-    def best_match(self, x1, x2):
-        """
-        x1: content feature, (B, C, H, W)
-        x2: style patches, (B, nH*nW, c, patch_size, patch_size)
-        """
-        x1 = F.normalize(x1, p=2, dim=1)
-        x2 = F.normalize(x2, p=2, dim=2)
-        match = []
-        dist_func = nn.Conv2d(x1.size(1), x2.size(1), (x2.size(3), x2.size(4)), stride=self.compare_stride, bias=False)
-        if torch.cuda.is_available():
-            dist_func.cuda()
-        dist_func.eval()
-        for i in range(x1.size(0)):
-            dist_func.weight.data = x2[i].squeeze().data
-            cosine_dist = dist_func(x1[i].unsqueeze(0))
-            tmp_match = torch.max(cosine_dist, dim=1, keepdim=False)[1]
-            match.append(tmp_match.squeeze().view(-1).data)
-        return match
-
     def best_topk_match(self, x1, x2):
         """
         Best topk match.

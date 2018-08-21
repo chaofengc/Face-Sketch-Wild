@@ -4,7 +4,7 @@ import os
 gpus           = '1'
 batch_size     = 6
 learning_rate  = 1e-3
-epochs         = 40
+epochs         = 40 
 vgg_weight     = './pretrain_model/vgg_conv.pth'
 weight_root    = './weight'
 Gnorm          = 'IN'
@@ -14,7 +14,7 @@ weight         = [1e0, 1e3, 1e-5]  # style loss, adv loss, tv loss
 resume         = 0
 topk           = 5
 vgg_select_num = 0
-train_style    = 'cufsf'
+train_style    = 'cufs'
 other          = 'vgg{:02d}'.format(vgg_select_num)
 train_data     = [
                  './data/AR/train_photos',
