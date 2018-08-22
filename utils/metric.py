@@ -30,7 +30,7 @@ def SSIM(gt_img, test_img):
     return tmp_score
 
 
-def avg_score(test_dir, gt_dir, metric_name='ssim', smooth=True, sigma=75, verbose=False):
+def avg_score(test_dir, gt_dir, metric_name='ssim', smooth=False, sigma=75, verbose=False):
     """
     Read images from two folders and calculate the average score.
     """
