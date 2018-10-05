@@ -71,7 +71,7 @@ def save_var_img(var, save_path=None, size=None):
         out.save(save_path)
     return out
 
-def subtract_mean_batch(batch, type='face'):
+def subtract_mean_batch(batch, img_type='face', sketch_mean_shift=0):
     """
     Convert image batch to BGR and subtract imagenet mean
     Batch Size: (B, C, H, W), RGB
@@ -79,52 +79,12 @@ def subtract_mean_batch(batch, type='face'):
     """
     vgg_mean_bgr = np.array([103.939, 116.779, 123.680]) 
     sketch_mean = np.array([np.dot(vgg_mean_bgr, np.array([0.114, 0.587, 0.299]))]*3)
-    if type == 'face':
+    if img_type == 'face':
         mean_bgr = vgg_mean_bgr
-    elif type == 'sketch':
-        mean_bgr = sketch_mean
+    elif img_type == 'sketch':
+        mean_bgr = sketch_mean + sketch_mean_shift
 
     batch = batch[:, [2, 1, 0], :, :]
     batch = batch - tensorToVar(torch.Tensor(mean_bgr)).view(1, 3, 1, 1) 
     return batch
-
-def save_images_grid(images, filename, cols = 1):
-    """Save a list of images in a single figure with matplotlib.
-    
-    Parameters
-    ---------
-    images: List of np.arrays compatible with plt.imshow.
-    cols (Default = 1): Number of columns in figure (number of rows is 
-                        set to np.ceil(n_images/float(cols))).
-    titles: List of titles corresponding to each image. Must have
-            the same length as titles.
-    """
-    n_images = len(images)
-    fig = plt.figure()
-    plt.subplots_adjust(left=0, bottom=0, right=0.1, top=0.1, wspace=0, hspace=0)
-    for n, image in enumerate(images):
-        a = fig.add_subplot(np.ceil(n_images/float(cols)), cols, n + 1)
-        if len(image.size) == 2:
-            plt.gray()
-        a.set_axis_off()
-        a.set_frame_on(False)
-        plt.imshow(image)
-    plt.tight_layout()
-    fig.savefig(filename, bbox_inches='tight', pad_inches=0)
-
-if __name__ == '__main__':
-    #  img = Image.open('../small_data/photos/00.png')
-    #  img = cv.imread('../small_data/photos/00.png')
-    #  draw_landmark_mask(img)
-    dataset_img_list_path = '../data/dataset_img_list.txt'
-    sketch_data = []
-    for i in open(dataset_img_list_path).readlines():
-        sketch_path = i.strip().replace('train_photos', 'train_sketches')
-        sketch_data.append(np.array(Image.open(sketch_path).convert('RGB')))
-    sketch_data = np.array(sketch_data)
-    print(sketch_data.shape, np.mean(sketch_data, axis=(0, 1, 2)))
-
-
-
-
 

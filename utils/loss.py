@@ -6,7 +6,7 @@ import numpy as np
 import torch.nn.functional as F
 from torchvision.transforms import functional as tf
 
-from pthutils import tensorToVar, extract_patches
+from .utils import tensorToVar, extract_patches
 from time import sleep
 
 def total_variation(x):
@@ -51,47 +51,6 @@ def feature_mrf_loss_func(x, y, vgg_model=None, layer=[], match_img_vgg=[], topk
         for pred, gt, match0, match1 in zip(x_feat, y_feat, match_img_feat[0], match_img_feat[1]):
             loss += mrf_crit(pred, gt, [match0, match1])
     return loss
-
-
-def gm_loss_func(x, y, vgg_model, layer=[]):
-    pass
-
-class RCLoss(nn.Module):
-    """
-    Region Covariances Loss.
-    """
-    def __init__(self, patch_size=(3, 3), patch_stride=1):
-        super(RCLoss, self).__init__()
-        self.patch_size = patch_size
-        self.patch_stride = patch_stride
-
-    def get_region_cov(self, tensor):
-        tensor = tensor.contiguous()
-        patch_tensor = extract_patches(tensor, self.patch_size, self.patch_stride)
-        B, patch_num, C, psz, psz = patch_tensor.shape
-        patch_tensor = patch_tensor.contiguous().view(B, patch_num, C, -1)
-        patch_tensor = patch_tensor - torch.mean(patch_tensor, -1, keepdim=True)
-        pgmm = torch.matmul(patch_tensor.transpose(2, 3), patch_tensor)
-        return pgmm
-
-    def forward(self, pred, target):
-        pred = self.get_region_cov(pred)
-        target = self.get_region_cov(target)
-        return nn.MSELoss()(pred, target)
-        
-
-class MaskGrad(torch.autograd.Function):
-    """
-    Mask backward gradient.
-    """
-    def __init__(self, mask):
-        self.mask = mask
-
-    def forward(self, x):
-        return x.view_as(x) # Must change x, otherwise backward won't be called
-
-    def backward(self, grad_output):
-        return grad_output * self.mask 
 
 
 class MRFLoss(nn.Module):

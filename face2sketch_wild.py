@@ -13,7 +13,6 @@ import itertools
 import copy
 from glob import glob
 
-from gpu_manager import GPUManager
 from utils.face_sketch_data import * 
 from models.networks import SketchNet, DNet
 from models.vgg19 import vgg19 
@@ -45,6 +44,7 @@ def cmd_option():
     arg_parser.add_argument('--flayers', type=int, nargs=5, default=[0, 0, 1, 1, 1], help="Layers used to calculate feature loss")
     arg_parser.add_argument('--weight', type=float, nargs=3, default=[1e0, 1e3, 1e-5], help="MSE loss weight, Feature loss weight, and total variation weight")
     arg_parser.add_argument('--topk', type=int, default=1, help="Topk image choose to match input photo")
+    arg_parser.add_argument('--meanshift', type=int, default=20, help="mean shift of the predicted sketch.")
     arg_parser.add_argument('--other', type=str, default='', help="Other information")
     
     arg_parser.add_argument('--test-dir', type=str, default='', help='Test image directory')
@@ -88,7 +88,7 @@ def train(args):
 
     if args.resume:
         weights = glob(os.path.join(args.save_weight_path, '*-*.pth'))
-        weight_path = sorted(weights[-1])[:-5]
+        weight_path = sorted(weights)[-1][:-5]
         Gnet.load_state_dict(torch.load(weight_path + 'G.pth'))
         Dnet.load_state_dict(torch.load(weight_path + 'D.pth'))
 
@@ -149,7 +149,7 @@ def train(args):
             train_img_org_vgg   = img_process.subtract_mean_batch(train_img_org, 'face')
             topk_sketch_img_vgg = img_process.subtract_mean_batch(topk_sketch_img, 'sketch')
             topk_photo_img_vgg  = img_process.subtract_mean_batch(topk_photo_img, 'face')
-            fake_sketch_vgg = img_process.subtract_mean_batch(fake_sketch.expand_as(train_img_org), 'sketch')
+            fake_sketch_vgg = img_process.subtract_mean_batch(fake_sketch.expand_as(train_img_org), 'sketch', args.meanshift)
 
             style_loss = loss.feature_mrf_loss_func(
                                 fake_sketch_vgg, topk_sketch_img_vgg, vgg19_model,
@@ -159,7 +159,8 @@ def train(args):
 
             # GAN Loss
             adv_loss = mse_crit(fake_score, real_label) * args.weight[1]
-            loss_G = style_loss * args.weight[0] + adv_loss + tv_loss * args.weight[2]
+            tv_loss  = tv_loss * args.weight[2]
+            loss_G = style_loss * args.weight[0] + adv_loss + tv_loss 
             loss_D = 0.5 * mse_crit(fake_score, fake_label) + 0.5 * mse_crit(real_score, real_label) 
 
             # Update parameters 
@@ -179,61 +180,20 @@ def train(args):
             if batch_idx % 100 == 0:
                 log.draw_loss_curve()
 
-            msg = "{:%Y-%m-%d %H:%M:%S}\tEpoch [{:03d}/{:03d}]\tBatch [{:03d}/{:03d}]\tData: {:.2f}  Train: {:.2f}\tLoss: G-{:.4f}, Adv-{:.4f}, D-{:.4f}".format(
+            msg = "{:%Y-%m-%d %H:%M:%S}\tEpoch [{:03d}/{:03d}]\tBatch [{:03d}/{:03d}]\tData: {:.2f}  Train: {:.2f}\tLoss: G-{:.4f}, Adv-{:.4f}, tv-{:.4f}, D-{:.4f}".format(
                             datetime.now(), 
                             e, args.epochs, sample_count, len(dataset),
-                            data_time, train_time, *[x.data[0] for x in [loss_G, adv_loss, loss_D]])
+                            data_time, train_time, *[x.data[0] for x in [loss_G, adv_loss, tv_loss, loss_D]])
             print(msg)
             log_file = open(os.path.join(args.save_weight_path, 'log.txt'), 'a+')
             log_file.write(msg + '\n')
             log_file.close()
         
-        if e > 13:
-            val(copy.deepcopy(Gnet), e, os.path.join(args.save_weight_path, 'val')) 
         save_weight_name = "epochs-{:03d}-".format(e)
         G_cpu_model = copy.deepcopy(Gnet).cpu() 
         D_cpu_model = copy.deepcopy(Dnet).cpu()
         torch.save(G_cpu_model.state_dict(), os.path.join(args.save_weight_path, save_weight_name+'G.pth'))
         torch.save(D_cpu_model.state_dict(), os.path.join(args.save_weight_path, save_weight_name+'D.pth'))
-
-
-def val(model, epochs, save_val_dir):
-    """
-    Validation code. To be removed when release.
-    """
-    utils.mkdirs(save_val_dir)
-    quan_result_file = open(save_val_dir + '/score.txt', 'a+')
-    val_dirs = ['./data/CUFS', './data/CUFSF_crop', './data/vgg_test']
-    save_val_dir = os.path.join(save_val_dir, '{:02d}'.format(epochs)) 
-    utils.mkdirs(save_val_dir)
-    model.eval()
-
-    # Generate results for images
-    scores = []
-    for val_d in val_dirs:
-        if 'CUFS' in val_d:
-            img_dir = os.path.join(val_d, 'test_photos')
-        else:
-            img_dir = val_d
-        for img_name in os.listdir(img_dir):
-            img_path = os.path.join(img_dir, img_name)
-            photo_input = img_process.read_img_var(img_path, size=(256, 256))
-            sketch_pred = model(photo_input)
-            save_path = os.path.join(save_val_dir, val_d.split('/')[-1], img_name)
-            utils.mkdirs(os.path.join(save_val_dir, val_d.split('/')[-1]))
-            img_process.save_var_img(sketch_pred.squeeze(), save_path, size=(250, 200))
-
-        if 'vgg_test' in val_d: continue
-
-        # SSIM score
-        ssim_score = avg_score(os.path.join(save_val_dir, val_d.split('/')[-1]), 
-                os.path.join(val_d, 'test_sketches'), smooth=False, metric_name='ssim')
-        fsim_score = avg_score(os.path.join(save_val_dir, val_d.split('/')[-1]), 
-                os.path.join(val_d, 'test_sketches'), smooth=False, metric_name='fsim')
-        scores += [ssim_score]
-
-    quan_result_file.write('{:02d}\t{:.4f}\t{:.4f}\n'.format(epochs, *scores))
-    quan_result_file.close()
 
 
 def test(args):
@@ -257,7 +217,7 @@ def test(args):
         sketch_save_path = os.path.join(args.result_dir, img_name)
         img_process.save_var_img(face_pred, sketch_save_path, (250, 200))
 
-    if args.test_gt_dir is not None:
+    if args.test_gt_dir != 'none':
         print('------------ Calculating average SSIM (This may take for a while)-----------')
         avg_ssim = avg_score(args.result_dir, args.test_gt_dir, metric_name='ssim', smooth=False, verbose=True) 
         print('------------ Calculating smoothed average SSIM (This may take for a while)-----------')
@@ -272,12 +232,9 @@ def test(args):
         print('Average FSIM (Smoothed): {}'.format(avg_fsim_smoothed))
 
 if __name__ == '__main__':
-    gm=GPUManager()
-    gpu_id = gm.auto_choice()
-    torch.cuda.set_device(gpu_id)
     args = cmd_option()
-    args.gpus = '{}'.format(gpu_id)
-    #  os.environ['CUDA_VISIBLE_DEVICES'] = args.gpus
+    gpu_ids = [int(x) for x in args.gpus.split(',')]
+    torch.cuda.set_device(gpu_ids[0])
 
     args.save_weight_dir = 'face2sketch-norm_G{}_D{}-top{}-style_{}-flayers{}-weight-{:.1e}-{:.1e}-{:.1e}-epoch{:02d}-{}'.format(
                         args.Gnorm, args.Dnorm, args.topk, args.train_style, "".join(map(str, args.flayers)),
