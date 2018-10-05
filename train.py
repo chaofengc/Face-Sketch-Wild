@@ -15,7 +15,7 @@ meanshift      = 30
 resume         = 0
 topk           = 5
 vgg_select_num = 0
-train_style    = 'cufsf'
+train_style    = 'cufs'
 other          = 'vgg{:02d}-meanshift{}'.format(vgg_select_num, meanshift)
 train_data     = [
                  './data/AR/train_photos',

@@ -4,7 +4,7 @@ PyTorch implementation for face sketch synthesis in the wild through semi-superv
 
 ![](example_img.png)
 
-[Semi-Supervised Learning for Face Sketch Synthesis in the Wild.]()  
+[**Semi-Supervised Learning for Face Sketch Synthesis in the Wild.**]()  
 [Chaofeng Chen](https://cfchen.com/), [Wei Liu](http://www.visionlab.cs.hku.hk/people.html), [Xiao Tan](http://www.xtan.org/), [Kwan-Yee K. Wong](http://i.cs.hku.hk/~kykwong/).   
 
 # Getting Started
@@ -36,9 +36,25 @@ python test.py 2  # Test on CUFSF test set
 python test.py 3  # Test on CUHK_Student test set
 python test.py 4  # Test on VGG test set
 ```
-You can also test on your own test dataset, simply change the `test_dir` and `test_weight_path`. If you have ground truth images, you can also specify `test_gt_dir`.
+You can also test on your own test dataset. Simply change the `--test_dir` and `--test_weight_path`. If you have ground truth images, you can also specify `--test_gt_dir`.
 
 ### Train
+1. Download the precalculated features for fast patch matching.
+```
+bash download_feature.sh
+```
+2. Configure training process.
+- `vgg_select_num [0 or 10]`. `0`: no extra images in training. `10`: extra VGG-Face in training. **Only the largest vgg10 is provided here**.  
+- `train_style [cufs, cufsf]`. use `cufs` or `cufsf` as the reference style.  
+The models in the paper are trained under 3 configurations:
+- `--vgg_select_num 0 --train_style cufs`. Model evaluated on CUFS. 
+- `--vgg_select_num 0 --train_style cufsf`. Model evaluated on CUFSF. 
+- `--vgg_select_num 10 --train_style cufs`. Model evaluated on VGG-Face. 
+
+3. Train the model.
+```
+python train.py
+```
 
 # Citation
 
@@ -54,6 +70,6 @@ If you find this code or the provided data useful in your research, please consi
 
 # Resources
 
-[1] [Random Sampling and Locality Constraint for Face Sketch Synthesis](http://www.ihitworld.com/RSLCR.html)
+[1] [Random Sampling and Locality Constraint for Face Sketch Synthesis](http://www.ihitworld.com/RSLCR.html)  
 [2] [Real-Time Exemplar-Based Face Sketch Synthesis](https://ybsong00.github.io/eccv14/index.html)
 
