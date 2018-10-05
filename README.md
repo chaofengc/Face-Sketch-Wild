@@ -4,7 +4,7 @@ PyTorch implementation for face sketch synthesis in the wild through semi-superv
 
 ![](example_img.png)
 
-[**Semi-Supervised Learning for Face Sketch Synthesis in the Wild.**]()  
+[**Semi-Supervised Learning for Face Sketch Synthesis in the Wild.**](http://cfchen.com/papers/face_sketch_wild(ACCV18).pdf)  
 [Chaofeng Chen](https://cfchen.com/), [Wei Liu](http://www.visionlab.cs.hku.hk/people.html), [Xiao Tan](http://www.xtan.org/), [Kwan-Yee K. Wong](http://i.cs.hku.hk/~kykwong/).   
 
 # Getting Started
@@ -46,7 +46,8 @@ bash download_feature.sh
 2. Configure training process.
 - `vgg_select_num [0 or 10]`. `0`: no extra images in training. `10`: extra VGG-Face in training. **Only the largest vgg10 is provided here**.  
 - `train_style [cufs, cufsf]`. use `cufs` or `cufsf` as the reference style.  
-The models in the paper are trained under 3 configurations:
+
+**The models in the paper are trained under 3 configurations**:
 - `--vgg_select_num 0 --train_style cufs`. Model evaluated on CUFS. 
 - `--vgg_select_num 0 --train_style cufsf`. Model evaluated on CUFSF. 
 - `--vgg_select_num 10 --train_style cufs`. Model evaluated on VGG-Face. 
