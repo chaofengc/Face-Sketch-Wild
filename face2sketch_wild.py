@@ -106,12 +106,12 @@ def train(args):
     # ---------------------- Define reference styles and feature loss layers ----------        
     if args.train_style == 'cufs':
         ref_style_dataset = ['CUHK_student', 'AR', 'XM2VTS']
-        ref_feature       = './data/feature_dataset.pth'
-        ref_img_list      = './data/dataset_img_list.txt'
+        ref_feature       = './data/cufs_feature_dataset.pth'
+        ref_img_list      = './data/cufs_reference_img_list.txt'
     elif args.train_style == 'cufsf':
         ref_style_dataset = ['CUFSF']
-        ref_feature       = './data/crop_feature_dataset.pth'
-        ref_img_list      = './data/crop_dataset_img_list.txt'
+        ref_feature       = './data/cufsf_feature_dataset.pth'
+        ref_img_list      = './data/cufsf_reference_img_list.txt'
     else:
         assert 1==0, 'Train style {} not supported.'.format(args.train_style)
 

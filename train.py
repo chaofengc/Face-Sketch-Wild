@@ -21,7 +21,7 @@ train_data     = [
                  './data/AR/train_photos',
                  './data/CUHK_student/train_photos',
                  './data/XM2VTS/train_photos',
-                 './data/CUFSF_crop/train_photos',
+                 './data/CUFSF/train_photos',
                 ] 
 if vgg_select_num:
     train_data.append('./data/vggface_{:02d}/'.format(vgg_select_num))
