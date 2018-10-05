@@ -7,11 +7,38 @@ PyTorch implementation for face sketch synthesis in the wild through semi-superv
 [Semi-Supervised Learning for Face Sketch Synthesis in the Wild.]()  
 [Chaofeng Chen](https://cfchen.com/), [Wei Liu](http://www.visionlab.cs.hku.hk/people.html), [Xiao Tan](http://www.xtan.org/), [Kwan-Yee K. Wong](http://i.cs.hku.hk/~kykwong/).   
 
-# Prerequisites
-
 # Getting Started
 
-# Quantitative Comparison 
+## Prerequisite
+- Pytorch 0.3
+- torchvision 0.2
+- opencv-python
+- matlab_wrapper
+- Matlab
+
+## Datasets
+- We use [CUFS](http://mmlab.ie.cuhk.edu.hk/archive/facesketch.html) and [CUFSF](http://mmlab.ie.cuhk.edu.hk/archive/cufsf/) dataset provided by Chinese University of Hong Kong (CUHK) to train our networks. You can also download them from [HERE](http://www.ihitworld.com/RSLCR.html).
+- For the training of in the wild images, we use a subset of VGG-Face.
+
+## Usage
+
+### Download data and pretrained models.
+Download the datasets and pretrained models using the following scripts
+```
+bash download_data_models.sh
+```
+
+### Quick Test
+After download the datasets and pretrain models, use the provided script to test the model
+```
+python test.py 1  # Test on CUFS test set
+python test.py 2  # Test on CUFSF test set
+python test.py 3  # Test on CUHK_Student test set
+python test.py 4  # Test on VGG test set
+```
+You can also test on your own test dataset, simply change the `test_dir` and `test_weight_path`. If you have ground truth images, you can also specify `test_gt_dir`.
+
+### Train
 
 # Citation
 
@@ -27,6 +54,6 @@ If you find this code or the provided data useful in your research, please consi
 
 # Resources
 
-- [Random Sampling and Locality Constraint for Face Sketch Synthesis](http://www.ihitworld.com/RSLCR.html)
-- [Real-Time Exemplar-Based Face Sketch Synthesis](https://ybsong00.github.io/eccv14/index.html)
+[1] [Random Sampling and Locality Constraint for Face Sketch Synthesis](http://www.ihitworld.com/RSLCR.html)
+[2] [Real-Time Exemplar-Based Face Sketch Synthesis](https://ybsong00.github.io/eccv14/index.html)
 
