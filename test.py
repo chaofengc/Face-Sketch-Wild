@@ -8,8 +8,8 @@ if sys.argv[1] == '1':
     result_dir       = './result/CUFS'
     test_weight_path = './pretrain_model/cufs-epochs-021-meanshift30-G.pth'
 elif sys.argv[1] == '2':
-    test_dir         = './data/CUFSF_crop/test_photos'
-    test_gt_dir      = './data/CUFSF_crop/test_sketches'
+    test_dir         = './data/CUFSF/test_photos'
+    test_gt_dir      = './data/CUFSF/test_sketches'
     result_dir       = './result/CUFSF'
     test_weight_path = './pretrain_model/cufsf-epochs-021-G.pth'
 elif sys.argv[1] == '3':
