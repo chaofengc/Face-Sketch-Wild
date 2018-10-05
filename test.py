@@ -21,7 +21,7 @@ elif sys.argv[1] == '4':
     test_dir         = './data/vgg_test/'
     test_gt_dir      = 'none' 
     result_dir       = './result/VGG'
-    test_weight_path = './pretrain_model/vgg-epochs-002-G.pth'
+    test_weight_path = './pretrain_model/vgg-epochs-003-G.pth'
 
 param            = [
         '--gpus {}'.format(gpus),
