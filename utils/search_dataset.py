@@ -75,9 +75,3 @@ def select_random_batch(ref_img_list, batch_size, dataset_filter=['CUHK_student'
     selected_sketch_batch, selected_ref_batch = torch.stack(selected_sketch_batch).squeeze(1), torch.stack(selected_ref_batch).squeeze(1)
     return selected_ref_batch, selected_sketch_batch
 
-if __name__ == '__main__':
-    from gpu_manager import GPUManager
-    gm=GPUManager()
-    torch.cuda.set_device(gm.auto_choice())
-    #  build_dataset('./face_sketch_data/feature_dataset.pth', './face_sketch_data/dataset_img_list.txt')
-    

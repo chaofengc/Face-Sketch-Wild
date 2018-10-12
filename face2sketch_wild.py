@@ -32,7 +32,7 @@ def cmd_option():
             default=["./data/AR/train_photos", "./data/CUHK_student/train_photos", "./data/XM2VTS/train_photos", "./data/CUFSF/train_photos"], help="Train data dir root")
     arg_parser.add_argument('--resume', type=int, default=0, help='Resume training or not')
     arg_parser.add_argument('--train-style', type=str, default='cufs', help='Styles used to train')
-    arg_parser.add_argument('--seed', type=int, default=123, help='Random seed for training')
+    arg_parser.add_argument('--seed', type=int, default=1234, help='Random seed for training')
     arg_parser.add_argument('--batch-size', type=int, default=6, help='Train batch size')
     arg_parser.add_argument('--lr', type=float, default=1e-3, help='Learning rate for training')
     arg_parser.add_argument('--epochs', type=int, default=40, help='Training epochs to generate')
@@ -55,11 +55,11 @@ def cmd_option():
 
 def train(args):
     torch.backends.cudnn.benchmark=True
+    torch.backends.cudnn.deterministic = True
     np.random.seed(args.seed)
-    if torch.cuda.is_available():
-        torch.cuda.manual_seed(args.seed)
-    else:
-        torch.manual_seed(args.seed)
+    random.seed(args.seed)
+    torch.manual_seed(args.seed)
+    torch.cuda.manual_seed_all(args.seed)
 
     # -------------------- Load data ----------------------------------
     transform = transforms.Compose([
@@ -67,7 +67,7 @@ def train(args):
                     ColorJitter(0.5, 0.5, 0.5, 0.3, 0.5),
                     ToTensor(),
         ])
-    dataset = FaceDataset(args.train_data, transform=transform) 
+    dataset = FaceDataset(args.train_data, True, transform=transform) 
     data_loader = DataLoader(dataset, shuffle=True, batch_size=args.batch_size, drop_last=True, num_workers=4) 
 
     # ----------------- Define networks ---------------------------------

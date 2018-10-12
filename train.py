@@ -1,7 +1,9 @@
 import os
+import random
 
 #  gpus          = '1,2'
 gpus           = '1'
+seed           = 3456 
 batch_size     = 6
 learning_rate  = 1e-3
 epochs         = 40 
@@ -10,13 +12,13 @@ weight_root    = './weight'
 Gnorm          = 'IN'
 Dnorm          = 'None'
 feature_layers = [0, 0, 1, 1, 1]
-weight         = [1e0, 1e3, 1e-5]  # style loss, adv loss, tv loss
-meanshift      = 30 
 resume         = 0
 topk           = 5
 vgg_select_num = 0
-train_style    = 'cufs'
-other          = 'vgg{:02d}-meanshift{}'.format(vgg_select_num, meanshift)
+train_style, weight = 'cufs', [1e0, 1e3, 1e-5] # style loss, adv loss, tv loss
+#  train_style, weight = 'cufs', [1e0, 1e3, 1e-2] # style loss, adv loss, tv loss
+meanshift      = 30
+other          = 'vgg{:02d}-meanshift{}-{}'.format(vgg_select_num, meanshift, seed)
 train_data     = [
                  './data/AR/train_photos',
                  './data/CUHK_student/train_photos',
@@ -40,6 +42,7 @@ param          = [
         '--topk {}'.format(topk),
         '--other {}'.format(other),
         '--resume {}'.format(resume),
+        '--seed {}'.format(seed),
         ]
 
 os.system('python face2sketch_wild.py train {}'.format(" ".join(param)))

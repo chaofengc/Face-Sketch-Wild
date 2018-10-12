@@ -32,26 +32,7 @@ def read_sketch_var(img_path, color=1, size=None, addxy=1, DoG=1):
     face_img = transforms.functional.resize(img, size)
     return tensorToVar(transforms.functional.to_tensor(face_img)) * 255
 
-def read_imgAB_var(img_path, AB=0, size=None):
-    """
-    Read RGB image, resize to given size and convert to Variable.
-    Args:
-        img_path: str, test image path
-        AB: read image A or image B
-        size: tuple, output size(W, H)
-    """
-    img = Image.open(img_path).convert('RGB')
-    
-    width, height = img.size
-    img1 = img.crop((0, 0, np.floor(width / 2).astype('int'), height))
-    img2 = img.crop((np.ceil(width / 2).astype('int'), 0, width, height))
-    img = img2 if AB else img1 
-
-    if size:
-        img = transforms.functional.resize(img, size)
-    img_tensor = transforms.functional.to_tensor(img)
-    return tensorToVar(img_tensor) * 255
-   
+  
 def save_var_img(var, save_path=None, size=None):
     """
     Post processing output Variable.
@@ -63,7 +44,6 @@ def save_var_img(var, save_path=None, size=None):
     out[out<0]   = 0
     if len(out.shape) > 2:
         out = out.transpose(1, 2, 0)
-    #  out = transforms.to_pil_image(out, mode='L')
     out = Image.fromarray(out.astype(np.uint8)).convert('RGB')
     if size:
         out = transforms.functional.resize(out, size)
