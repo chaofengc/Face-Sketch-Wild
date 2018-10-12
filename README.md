@@ -14,7 +14,7 @@ PyTorch implementation for face sketch synthesis in the wild through semi-superv
 - torchvision 0.2
 - opencv-python
 - matlab_wrapper
-- Matlab
+- Matlab (For FSIM evaluation)
 
 ## Datasets
 - We use [CUFS](http://mmlab.ie.cuhk.edu.hk/archive/facesketch.html) and [CUFSF](http://mmlab.ie.cuhk.edu.hk/archive/cufsf/) dataset provided by Chinese University of Hong Kong (CUHK) to train our networks. You can also download them from [HERE](http://www.ihitworld.com/RSLCR.html).

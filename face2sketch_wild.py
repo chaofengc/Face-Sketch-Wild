@@ -1,3 +1,4 @@
+from __future__ import print_function
 import torch
 import torch.nn as nn
 from torch.optim import Adam
@@ -216,6 +217,7 @@ def test(args):
 
         sketch_save_path = os.path.join(args.result_dir, img_name)
         img_process.save_var_img(face_pred, sketch_save_path, (250, 200))
+        print('Save sketch in', sketch_save_path)
 
     if args.test_gt_dir != 'none':
         print('------------ Calculating average SSIM (This may take for a while)-----------')

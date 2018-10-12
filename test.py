@@ -11,7 +11,7 @@ elif sys.argv[1] == '2':
     test_dir         = './data/CUFSF/test_photos'
     test_gt_dir      = './data/CUFSF/test_sketches'
     result_dir       = './result/CUFSF'
-    test_weight_path = './pretrain_model/cufsf-epochs-021-G.pth'
+    test_weight_path = './pretrain_model/cufsf-epochs-063-meanshift30-G.pth'
 elif sys.argv[1] == '3':
     test_dir         = './data/CUHK_student/test_photos'
     test_gt_dir      = './data/CUHK_student/test_sketches'
