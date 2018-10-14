@@ -3,7 +3,7 @@ import random
 
 #  gpus          = '1,2'
 gpus           = '1'
-seed           = 3456 
+seed           = 12345 
 batch_size     = 6
 learning_rate  = 1e-3
 epochs         = 40 
@@ -15,9 +15,9 @@ feature_layers = [0, 0, 1, 1, 1]
 resume         = 0
 topk           = 5
 vgg_select_num = 0
-train_style, weight = 'cufs', [1e0, 1e3, 1e-5] # style loss, adv loss, tv loss
-#  train_style, weight = 'cufs', [1e0, 1e3, 1e-2] # style loss, adv loss, tv loss
 meanshift      = 30
+weight         = [1e0, 1e3, 1e-5]
+train_style    = 'cufs' # style loss, adv loss, tv loss
 other          = 'vgg{:02d}-meanshift{}-{}'.format(vgg_select_num, meanshift, seed)
 train_data     = [
                  './data/AR/train_photos',

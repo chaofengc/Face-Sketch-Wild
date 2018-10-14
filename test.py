@@ -1,22 +1,22 @@
 import os
 import sys
 
-gpus             = '2'
+gpus = '2'
 if sys.argv[1] == '1':
     test_dir         = './data/CUFS/test_photos'
     test_gt_dir      = './data/CUFS/test_sketches'
     result_dir       = './result/CUFS'
-    test_weight_path = './pretrain_model/cufs-epochs-021-meanshift30-G.pth'
+    test_weight_path = './pretrain_model/cufs-epochs-026-meanshift30-G.pth'
 elif sys.argv[1] == '2':
     test_dir         = './data/CUFSF/test_photos'
     test_gt_dir      = './data/CUFSF/test_sketches'
     result_dir       = './result/CUFSF'
-    test_weight_path = './pretrain_model/cufsf-epochs-063-meanshift30-G.pth'
+    test_weight_path = './pretrain_model/cufsf-epochs-019-meanshift30-G.pth'
 elif sys.argv[1] == '3':
     test_dir         = './data/CUHK_student/test_photos'
     test_gt_dir      = './data/CUHK_student/test_sketches'
     result_dir       = './result/CUHK_student'
-    test_weight_path = './pretrain_model/cufs-epochs-021-meanshift30-G.pth'
+    test_weight_path = './pretrain_model/cufs-epochs-026-meanshift30-G.pth'
 elif sys.argv[1] == '4':
     test_dir         = './data/vgg_test/'
     test_gt_dir      = 'none' 
