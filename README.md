@@ -4,7 +4,7 @@ PyTorch implementation for face sketch synthesis in the wild through semi-superv
 
 ![](example_img.png)
 
-[**Semi-Supervised Learning for Face Sketch Synthesis in the Wild.**](http://cfchen.com/papers/face_sketch_wild(ACCV18).pdf)  
+[**Semi-Supervised Learning for Face Sketch Synthesis in the Wild.**](https://cfchen.com/papers/ACCV2018_face_sketch_wild.pdf)  
 [Chaofeng Chen](https://cfchen.com/), [Wei Liu](http://www.visionlab.cs.hku.hk/people.html), [Xiao Tan](http://www.xtan.org/), [Kwan-Yee K. Wong](http://i.cs.hku.hk/~kykwong/).   
 
 # Getting Started
