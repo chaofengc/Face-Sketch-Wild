@@ -31,7 +31,7 @@ Download the precalculated features for fast patch matching.
 ```
 bash download_feature.sh
 ```
-If the server is not available, you can also download the resources from [BaiduYun](https://pan.baidu.com/s/1pKpSVj7trJhxXVp7MoECaA) or [GoogleDrive](https://drive.google.com/drive/folders/1CxURCNxV1MbfYRNLq3PFcQkBouP0MSUX?usp=sharing)
+If the server is not available, you can also download the resources from [BaiduYun](https://pan.baidu.com/s/1pKpSVj7trJhxXVp7MoECaA) or [GoogleDrive](https://drive.google.com/drive/folders/1CxURCNxV1MbfYRNLq3PFcQkBouP0MSUX?usp=sharing), and then extract the files to the corresponding directory according to the download scripts above.
 
 ### Quick Test
 After download the datasets and pretrain models, use the provided script to test the model
