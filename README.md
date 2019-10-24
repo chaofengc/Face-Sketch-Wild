@@ -5,7 +5,7 @@ PyTorch implementation for face sketch synthesis in the wild through semi-superv
 ![](example_img.png)
 
 [**Semi-Supervised Learning for Face Sketch Synthesis in the Wild.**](https://arxiv.org/abs/1812.04929)  
-[Chaofeng Chen](https://cfchen.com/), [Wei Liu](http://www.visionlab.cs.hku.hk/people.html), [Xiao Tan](http://www.xtan.org/), [Kwan-Yee K. Wong](http://i.cs.hku.hk/~kykwong/).   
+[Chaofeng Chen](https://chaofengc.github.io), [Wei Liu](http://www.visionlab.cs.hku.hk/people.html), [Xiao Tan](http://www.xtan.org/), [Kwan-Yee K. Wong](http://i.cs.hku.hk/~kykwong/).   
 
 # Getting Started
 
@@ -22,11 +22,16 @@ PyTorch implementation for face sketch synthesis in the wild through semi-superv
 
 ## Usage
 
-### Download data and pretrained models.
-Download the datasets and pretrained models using the following scripts
+### Download.
+Download the datasets and pretrained models using the following scripts.
 ```
 bash download_data_models.sh
 ```
+Download the precalculated features for fast patch matching.
+```
+bash download_feature.sh
+```
+If the server is not available, you can also download the resources from [BaiduYun](https://pan.baidu.com/s/1pKpSVj7trJhxXVp7MoECaA) or [GoogleDrive](https://drive.google.com/drive/folders/1CxURCNxV1MbfYRNLq3PFcQkBouP0MSUX?usp=sharing)
 
 ### Quick Test
 After download the datasets and pretrain models, use the provided script to test the model
@@ -39,11 +44,7 @@ python test.py 4  # Test on VGG test set
 You can also test on your own test dataset. Simply change the `--test_dir` and `--test_weight_path`. If you have ground truth images, you can also specify `--test_gt_dir`.
 
 ### Train
-1. Download the precalculated features for fast patch matching.
-```
-bash download_feature.sh
-```
-2. Configure training process.
+1. Configure training process.
 - `vgg_select_num [0 or 10]`. `0`: no extra images in training. `10`: extra VGG-Face in training. **Only the largest vgg10 is provided here**.  
 - `train_style [cufs, cufsf]`. use `cufs` or `cufsf` as the reference style.  
 
@@ -52,7 +53,7 @@ bash download_feature.sh
 - `--vgg_select_num 0 --train_style cufsf`. Model evaluated on CUFSF. 
 - `--vgg_select_num 10 --train_style cufs`. Model evaluated on VGG-Face. 
 
-3. Train the model.
+2. Train the model.
 ```
 python train.py
 ```
