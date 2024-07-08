@@ -64,7 +64,7 @@ If you find this code or the provided data useful in your research, please consi
 ```
 @inproceedings{chen2018face-sketch-wild,
     title={Semi-Supervised Learning for Face Sketch Synthesis in the Wild},
-    author={Chen, Chaofeng and Liu, Wei and Tan, Xiao and Wong, KKY},
+    author={Chen, Chaofeng and Liu, Wei and Tan, Xiao and Wong, Kwan-Yee~K},
     booktitle={Asian Conference on Computer Vision (ACCV)},
     year={2018},
 }
